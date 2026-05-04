@@ -3,8 +3,12 @@ services:
     build: .
     env_file: .env
     volumes:
-      - ${HOME}/.codex:/home/telecodex/.codex:rw
-      - ./workspace:/workspace:rw
+      - type: bind
+        source: ${HOST_CODEX_PATH:-${USERPROFILE}/.codex}
+        target: /home/telecodex/.codex
+      - type: bind
+        source: ${HOST_WORKSPACE_PATH:-./workspace}
+        target: /workspace
     cap_drop:
       - ALL
     security_opt:

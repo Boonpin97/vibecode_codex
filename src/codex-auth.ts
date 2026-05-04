@@ -1,4 +1,5 @@
 import { execFile } from "node:child_process";
+import path from "node:path";
 
 export interface AuthStatus {
   authenticated: boolean;
@@ -11,7 +12,6 @@ export interface LoginResult {
   message: string;
 }
 
-const CODEX_CLI = "codex";
 const COMMAND_TIMEOUT_MS = 10_000;
 const AUTH_CACHE_TTL_MS = 30_000;
 
@@ -110,9 +110,11 @@ export async function startLogout(): Promise<LoginResult> {
 }
 
 function runCodexCommand(args: string[]): Promise<{ stdout: string; stderr: string }> {
+  const codexCli = getCodexCliCommand();
+
   return new Promise((resolve, reject) => {
     execFile(
-      CODEX_CLI,
+      codexCli,
       args,
       {
         timeout: COMMAND_TIMEOUT_MS,
@@ -143,7 +145,7 @@ function parseCommandError(error: unknown): AuthStatus {
     return {
       authenticated: false,
       method: "none",
-      detail: "Codex CLI not found. Install it or set CODEX_API_KEY.",
+      detail: buildMissingCliMessage(),
     };
   }
 
@@ -174,4 +176,16 @@ function extractErrorMessage(error: unknown): string {
     }
   }
   return error instanceof Error ? error.message : String(error);
+}
+
+function getCodexCliCommand(): string {
+  const override = process.env.CODEX_CLI_PATH?.trim();
+  return override || "codex";
+}
+
+function buildMissingCliMessage(): string {
+  const cliCommand = getCodexCliCommand();
+  const cliLabel = path.basename(cliCommand);
+  const overrideHint = cliCommand === "codex" ? " You can also set CODEX_CLI_PATH if the CLI is installed outside PATH." : "";
+  return `${cliLabel} CLI not found at '${cliCommand}'. Install the Codex CLI, fix PATH, or set CODEX_API_KEY.${overrideHint}`;
 }

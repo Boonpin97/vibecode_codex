@@ -41,6 +41,7 @@ describe("codex-auth", () => {
   beforeEach(() => {
     mockExecFile.mockReset();
     clearAuthCache();
+    vi.unstubAllEnvs();
   });
 
   afterEach(() => {
@@ -152,7 +153,8 @@ describe("codex-auth", () => {
 
       const result = await startLogin();
       expect(result.success).toBe(false);
-      expect(result.message).toContain("ENOENT");
+      expect(result.message).toContain("CLI not found");
+      expect(result.message).toContain("CODEX_API_KEY");
     });
 
     it("clears the auth cache", async () => {
@@ -191,7 +193,18 @@ describe("codex-auth", () => {
 
       const result = await startLogout();
       expect(result.success).toBe(false);
-      expect(result.message).toContain("ENOENT");
+      expect(result.message).toContain("CLI not found");
+      expect(result.message).toContain("CODEX_API_KEY");
+    });
+
+    it("supports overriding the CLI path", async () => {
+      vi.stubEnv("CODEX_CLI_PATH", "C:\\tools\\codex.exe");
+      mockExecNotFound();
+
+      const result = await startLogin();
+      expect(result.success).toBe(false);
+      expect(result.message).toContain("C:\\tools\\codex.exe");
+      expect(result.message).not.toContain("outside PATH");
     });
   });
 });

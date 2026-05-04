@@ -30,6 +30,7 @@ TeleCodex is a Telegram bridge for the OpenAI Codex CLI SDK. It keeps a Codex th
 - The Codex CLI installed and authenticated on the host:
   - API key auth: set `CODEX_API_KEY`
   - ChatGPT login: `codex login` on the machine, or use `/login` from Telegram
+  - If the CLI is installed outside `PATH`, set `CODEX_CLI_PATH` to the executable location
 - *(Optional)* `ffmpeg` — required for local voice transcription via parakeet-coreml
 - *(Optional)* `OPENAI_API_KEY` — enables OpenAI Whisper as a voice transcription fallback
 
@@ -51,7 +52,10 @@ TeleCodex is a Telegram bridge for the OpenAI Codex CLI SDK. It keeps a Codex th
    |---|---|---|
    | `TELEGRAM_BOT_TOKEN` | ✅ | Bot token from @BotFather |
    | `TELEGRAM_ALLOWED_USER_IDS` | ✅ | Comma-separated Telegram user IDs |
+   | `HOST_CODEX_PATH` | — | Host folder to mount as the container's `~/.codex`; useful on Windows if `HOME` is not set |
+   | `HOST_WORKSPACE_PATH` | — | Host folder to mount as `/workspace` in Docker (default `./workspace`) |
    | `CODEX_API_KEY` | — | API key for Codex (alternative to ChatGPT login) |
+   | `CODEX_CLI_PATH` | — | Optional absolute path to the Codex CLI executable if `codex` is not on `PATH` |
    | `CODEX_MODEL` | — | Default model, e.g. `gpt-5.4`, `o3` |
    | `CODEX_SANDBOX_MODE` | — | `read-only`, `workspace-write` *(default)*, `danger-full-access` |
    | `CODEX_APPROVAL_POLICY` | — | `never` *(default)*, `on-request`, `on-failure`, `untrusted` |
@@ -226,8 +230,8 @@ docker compose up --build
 
 The compose file:
 - loads environment from `.env`
-- mounts `~/.codex` for auth state and persisted threads
-- mounts `./workspace` as `/workspace`
+- mounts `HOST_CODEX_PATH` as the container's `~/.codex` (defaults to `${USERPROFILE}/.codex`)
+- mounts `HOST_WORKSPACE_PATH` as `/workspace` (defaults to `./workspace`)
 - runs as a non-root user
 
 ## Development

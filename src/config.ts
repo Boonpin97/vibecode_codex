@@ -37,7 +37,7 @@ export interface TeleCodexConfig {
 export function loadConfig(): TeleCodexConfig {
   loadEnvFile(path.resolve(process.cwd(), ".env"));
 
-  const telegramBotToken = requireEnv("TELEGRAM_BOT_TOKEN");
+  const telegramBotToken = parseTelegramBotToken(requireEnv("TELEGRAM_BOT_TOKEN"));
   const telegramAllowedUserIds = parseAllowedUserIds(requireEnv("TELEGRAM_ALLOWED_USER_IDS"));
   const workspace = resolveWorkspace();
   const maxFileSize = parseMaxFileSize(optionalString(process.env.MAX_FILE_SIZE));
@@ -150,6 +150,17 @@ function requireEnv(name: string): string {
 function optionalString(value: string | undefined): string | undefined {
   const trimmed = value?.trim();
   return trimmed ? trimmed : undefined;
+}
+
+function parseTelegramBotToken(raw: string): string {
+  const tokenPattern = /^\d+:[A-Za-z0-9_-]{20,}$/;
+  if (!tokenPattern.test(raw)) {
+    throw new Error(
+      "Invalid TELEGRAM_BOT_TOKEN format. Expected a BotFather token like <bot-id>:<secret>.",
+    );
+  }
+
+  return raw;
 }
 
 function parseAllowedUserIds(raw: string): number[] {
