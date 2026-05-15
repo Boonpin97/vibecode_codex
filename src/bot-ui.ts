@@ -28,6 +28,7 @@ export function renderHelpMessage(): DualText {
         ["/launch_profiles", "Select launch profile"],
         ["/model", "View & change model"],
         ["/effort", "Set reasoning effort"],
+        ["/usage", "Current model usage stats"],
       ],
     },
     {

@@ -504,20 +504,23 @@ export function createBot(config: TeleCodexConfig, registry: SessionRegistry): B
       }
 
       const finalText = buildFinalResponseText(accumulatedText);
+      const completionMessage = buildPromptCompletionMessage();
       if (!finalText) {
-        const html = "<b>✅ Done</b>";
-        const plainText = "✅ Done";
-
-        if (responseMessageId) {
-          await safeEditMessage(bot, chatId, responseMessageId, html, { fallbackText: plainText });
-          await removeAbortKeyboard();
-        } else {
-          await safeReply(ctx, html, { fallbackText: plainText });
-        }
+        await removeAbortKeyboard();
+        await sendTextMessage(bot.api, chatId, completionMessage.text, {
+          parseMode: completionMessage.parseMode,
+          fallbackText: completionMessage.fallbackText,
+          messageThreadId,
+        });
         return;
       }
 
       await deliverRenderedChunks(splitMarkdownForTelegram(finalText));
+      await sendTextMessage(bot.api, chatId, completionMessage.text, {
+        parseMode: completionMessage.parseMode,
+        fallbackText: completionMessage.fallbackText,
+        messageThreadId,
+      });
     };
 
     const callbacks: CodexSessionCallbacks = {
@@ -1089,6 +1092,36 @@ export function createBot(config: TeleCodexConfig, registry: SessionRegistry): B
     const htmlLines = [`<b>${escapeHTML(contextLabel)}:</b>`, renderSessionInfoHTML(info)];
 
     await safeReply(ctx, htmlLines.join("\n"), { fallbackText: plainLines.join("\n") });
+  });
+
+  bot.command("usage", async (ctx) => {
+    const contextSession = await getContextSession(ctx, { deferThreadStart: true });
+    if (!contextSession) {
+      return;
+    }
+
+    const info = contextSession.session.getInfo();
+    if (!info.sessionTokens) {
+      await safeReply(ctx, "<b>Usage:</b> no completed turns yet.", {
+        fallbackText: "Usage: no completed turns yet.",
+      });
+      return;
+    }
+
+    const htmlLines = [
+      "<b>Usage:</b>",
+      info.model ? `<b>Model:</b> <code>${escapeHTML(info.model)}</code>` : undefined,
+      `<b>Session tokens:</b> <code>${escapeHTML(formatSessionTokensValue(info.sessionTokens))}</code>`,
+    ];
+    const plainLines = [
+      "Usage:",
+      info.model ? `Model: ${info.model}` : undefined,
+      formatSessionTokensPlain(info.sessionTokens),
+    ];
+
+    await safeReply(ctx, htmlLines.filter((line): line is string => Boolean(line)).join("\n"), {
+      fallbackText: plainLines.filter((line): line is string => Boolean(line)).join("\n"),
+    });
   });
 
   const openLaunchProfilesPicker = async (ctx: Context): Promise<void> => {
@@ -2143,6 +2176,7 @@ export async function registerCommands(bot: Bot<Context>): Promise<void> {
     { command: "launch_profiles", description: "Select launch profile" },
     { command: "model", description: "View & change model" },
     { command: "effort", description: "Set reasoning effort" },
+    { command: "usage", description: "Current model usage stats" },
     { command: "auth", description: "Check auth status" },
     { command: "login", description: "Start authentication" },
     { command: "logout", description: "Sign out" },
@@ -2248,6 +2282,15 @@ function renderTodoList(items: Array<{ text: string; completed: boolean }>): str
     return `${icon} ${escapeHTML(item.text)}`;
   });
   return `📋 <b>Plan</b>\n${lines.join("\n")}`;
+}
+
+export function buildPromptCompletionMessage(): RenderedChunk {
+  return {
+    text: "<b>\u2705 Done</b>",
+    fallbackText: "\u2705 Done",
+    parseMode: "HTML",
+    sourceText: "\u2705 Done",
+  };
 }
 
 export function formatTurnUsageLine(usage: { inputTokens: number; cachedInputTokens: number; outputTokens: number }): string {
